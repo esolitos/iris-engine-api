@@ -92,13 +92,16 @@
 					var gallID = setup.galleryID + currGallery.gid;
 					
 					wrapper = $("<DIV/>").attr({
-						id: gallID
+						id: gallID,
+						class: "well"
 					}).css({
 						width: '90%',
 						'min-width': '350px',
-						'max-width': '1050px',
+						'max-width': '1200px',
 						margin: '50px auto'
 					});
+
+					wrapper.append( $("<h2/>").text(currGallery.name).css('text-align', "center") );
 					
 					gall = $("<div/>").attr({
 						class : setup.galleriesClass,
