@@ -1,10 +1,3 @@
-// $('div').tooltip(); // calls the init method
-// $('div').tooltip({  // calls the init method
-//   foo : 'bar'
-// });
-// $('div').tooltip('hide'); // calls the hide method
-// $('div').tooltip('update', 'This is the new tooltip content!'); // calls the update method
-
 (function( $ ){
 	
 	var defaults = {
@@ -39,6 +32,13 @@
 		slideshowCaruselID: "slideshow-carusel",
 		slideshowThumbnailID: "slideshow-thumb"
 	}
+	
+	var wrapperSize = {position:{}};
+	
+	// jQuery Object cache
+	var $carus = null;
+	var $thumbs = null;
+	var $wrapper = null;
 
     var methods = {
         init : function(options) {
@@ -110,7 +110,7 @@
 					
 					wrapper = $("<DIV/>").attr({
 						id: gallID,
-						class: "well"
+						'class': "well"
 					}).css({
 						width: '90%',
 						'min-width': '350px',
@@ -121,7 +121,7 @@
 					wrapper.append( $("<h2/>").text(currGallery.name).css('text-align', "center") );
 					
 					gall = $("<div/>").attr({
-						class : setup.galleriesClass,
+						'class': setup.galleriesClass,
 						'data-gid': currGallery.gid
 					}).css({
 						'text-align': "center",
@@ -132,7 +132,7 @@
 						imageData = currGallery.images[j];
 						
 						img = $("<img/>").attr({
-							class: "gallery-image",
+							'class': "gallery-image",
 							title: imageData.title,
 							alt: imageData.descr,
 							src: setup.irisLogin + imageData.thumb,
@@ -168,8 +168,6 @@
 		prepare : function( imgID, gID, options ) {
 			setup = $.extend(defaults, options);
 			var gallID = setup.galleryID+gID;
-			var $carus = null;
-			var $thumbs = null;
 			
 			var $backdrop = $("<div/>").attr({
 				id: setup.slideshowBackdropID
@@ -189,14 +187,15 @@
 			});
 
 
+			var win_width = $(window).width();
+			var win_height = $(window).height();
+
+			wrapperSize.width = win_width * 0.8;
+			wrapperSize.height = win_height * 0.75;
+			wrapperSize.position.top = (win_height / 2) - (wrapperSize.height /2);
+			wrapperSize.position.left = (win_width / 2) - (wrapperSize.width /2);
 			
-			var wrapperSize = {position:{}};
-			wrapperSize.width = window.innerWidth * 0.8;
-			wrapperSize.height = window.innerHeight * 0.75;
-			wrapperSize.position.top = (window.innerHeight / 2) - (wrapperSize.height /2);
-			wrapperSize.position.left = (window.innerWidth / 2) - (wrapperSize.width /2);
-			
-			var $wrapper = $("<div/>").attr({
+			$wrapper = $("<div/>").attr({
 				id: setup.slideshowWrapperID
 			}).css({
 				position: "fixed",
@@ -248,11 +247,19 @@
 				'z-index': 6000
 			}).find('img').each(function(idx){
 				if(this.src) {
-					this.removeAttribute("style");
-					this.setAttribute('width', 'auto');
-					this.setAttribute('height', $("#"+setup.slideshowWrapperID).innerHeight());
-				
-					this.style.display = 'block';
+					this.onload =  function() {
+						var ratio = $wrapper.height() / this.height;
+						var img_width = this.width * ratio
+						
+						this.setAttribute('width', img_width );
+						this.setAttribute('height', $wrapper.height() );
+
+						
+						this.removeAttribute("style");
+						this.style.display = 'block';
+						this.style.float = 'left';
+					}				
+					
 					
 					this.src = this.getAttribute("data-large");
 					this.removeAttribute("data-large");
@@ -311,7 +318,9 @@
 			
 			$carus.waitForImages({
 			    finished: function() {
-			        methods.start(imgID, gID, options);
+					setTimeout(function () {
+						methods.start(imgID, gID, options);
+					}, 50);
 			    },
 			});
 
@@ -323,20 +332,9 @@
 			
 			setup = $.extend(defaults, options);
 			var gallID = setup.galleryID+gID;
-			var $carus = null;
-			var $thumbs = null;
-			
-			var wrapperSize = {position:{}};
-			wrapperSize.width = window.innerWidth * 0.8;
-			wrapperSize.height = window.innerHeight * 0.75;
-			wrapperSize.position.top = (window.innerHeight / 2) - (wrapperSize.height /2);
-			wrapperSize.position.left = (window.innerWidth / 2) - (wrapperSize.width /2);
-			
 			
 			$carus = $("#"+setup.slideshowCaruselID);
 			$thumbs = $("#"+setup.slideshowThumbnailID);
-			
-			// $("#"+setup.slideshowCaruselID).carouFredSel({items:1},{debug:true});
 			
 			$carus.carouFredSel({
 				width: "100%",
@@ -345,25 +343,22 @@
 					start: $('#'+setup.slideshowCaruselID+' img[data-imgid='+ imgID +']'),
 					visible: 1,
 					height: wrapperSize.height,
-					width: 'variable'
 				},
 				scroll: {
 					fx: 'crossfade',
 					onBefore: function( data ) {
 						imgID = data.items.visible.data('imgid');
 						pos = Math.floor(setup.thumbs_visible / 2) - 1;
-							
+
 						$thumbs.trigger( 'slideTo', [ $('#'+setup.slideshowThumbnailID+' img[data-imgid='+ imgID +']'), - pos  ] );
 					}
 				},
 				prev: {key: 'left'},
 				next: {key: 'right'},
 				onCreate: function(data) {
-					$('#'+setup.slideshowWrapperID).css({
-						// height: data.height
-					}).animate({opacity: 1});
+					$('#'+setup.slideshowWrapperID).animate({opacity: 1});
 				}
-			});
+			}, {debug: true});
 			 
 			$thumbs.carouFredSel({
 				auto: false,
@@ -371,7 +366,7 @@
 			});
 				
 			setup.thumbs_visible = $thumbs.children('img').size();
-			$carus.trigger("play", [0, true]);	
+			$carus.trigger("play", [0, true]);
         },
         
 		
@@ -396,16 +391,20 @@
 			
 			methods.stop();
 			
-			$(wrapper).animate({opacity:0}, 200);
+			$(wrapper).animate({opacity:0}, 200, function(){
+				wrapper.parentNode.removeChild( wrapper );
+			});
+
 			$(bg).animate({opacity:0}, 200, function() {
 				$("#"+setup.slideshowCaruselID).trigger('destroy');
 				$("#"+setup.slideshowThumbnailID).trigger('destroy');
+				bg.parentNode.removeChild(bg);
 			});
 			
-			setTimeout(function () {
-				wrapper.parentNode.removeChild(wrapper);
-				bg.parentNode.removeChild(bg);
-			}, 200);
+			// setTimeout(function () {
+			// 	wrapper.parentNode.removeChild( wrapper );
+			// 	bg.parentNode.removeChild(bg);
+			// }, 200);
 		}
     };
 
