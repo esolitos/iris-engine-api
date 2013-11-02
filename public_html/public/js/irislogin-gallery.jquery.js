@@ -12,6 +12,15 @@
 		// These are the defaults.
 		irisLoginAPI: "http://api.irislogin.it/",
 		irisLogin: "http://irislogin.it/",
+		images: {
+			// closeImage: "http://api.irislogin.it/public/img/btn-del-small.png",
+			closeImage: "http://api.irislogin.it/public/img/btn-del-over-small.png",
+			loaderBackImage: "http://api.irislogin.it/public/img/ajax-loader.gif",
+		},
+		scripts: {
+			carouFredSel: "http://api.irislogin.it/public/js/jquery.carouFredSel.min.js",
+			waitForImages: "http://api.irislogin.it/public/js/jquery.waitForImages.min.js"
+		},
 		galleries: [],
 		websiteID: 0,
 		gallerySelected: 0,
@@ -23,6 +32,7 @@
 		wrapperID: false,
 		galleryID: "irislogin-gallery-",
 		galleriesClass: "irislogin-galleries-wrapper",
+		closeButtonID: false,
 		
 		slideshowBackdropID: "slideshow-overall-backdrop",
 		slideshowWrapperID: "slideshow-wrapper",
@@ -37,7 +47,14 @@
 			// If we don't have a website ID set we can't get the images and build the galleries
 			// so we cheack fort that otherwise we throw and error.
 			if(settings.websiteID != 0) {
-				$.ajax({
+				
+				$.when(
+					$.getScript( settings.scripts.carouFredSel ),
+					$.getScript( settings.scripts.waitForImages ),
+					$.Deferred(function( deferred ){
+						$( deferred.resolve );
+					})
+				).done($.ajax({
 					// Getting the website data trough JSONP
 					url: settings.irisLoginAPI +'gallery/'+ settings.websiteID +'?callback=?',
 					type: 'GET',
@@ -67,7 +84,7 @@
 							console.log(errorThrown);
 						}
 					}
-				});
+				}));
 			}
 			else {
 				document.console.log("IrisLoginGallery: ERROR No website ID given.");
@@ -124,7 +141,7 @@
 							'data-imgID': imageData.id
 						}).bind('click', function(ev){
 							// $me = $(this);
-							methods.start(this.getAttribute('data-imgid'), this.getAttribute('data-gid'));
+							methods.prepare(this.getAttribute('data-imgid'), this.getAttribute('data-gid'));
 
 						}).css({
 							display: 'inline-block',
@@ -133,11 +150,11 @@
 							margin: '0px 20px 20px 0px'
 						});
 						
-						img.appendTo(gall);
+						gall.prepend(img);
 					}
 					
-					gall.appendTo(wrapper);
-					wrapper.appendTo("#"+setup.wrapperID);
+					wrapper.append(gall);
+					wrapper.prependTo("#"+setup.wrapperID);
 						
 				}
 				
@@ -145,51 +162,48 @@
 				
 			}
 		},
-        
 		
-		start : function( imgID, gID, options ) {
-			
+		
+		
+		prepare : function( imgID, gID, options ) {
 			setup = $.extend(defaults, options);
 			var gallID = setup.galleryID+gID;
 			var $carus = null;
 			var $thumbs = null;
 			
-			$backdrop = $("<div/>").attr({
+			var $backdrop = $("<div/>").attr({
 				id: setup.slideshowBackdropID
 			}).css({
-				position: 'absolute',
+				position: 'fixed',
 				top: 0,
-				bottom: 0,
-				right: 0,
 				left: 0,
 				width: '100%',
 				height: '100%',
-				'background-color': '#FAFAFA',
+				'min-height': $(window).height,
+				'background-image': 'url('+setup.images.loaderBackImage+')',
+				'background-repeat': 'no-repeat',
+				'background-position': 'center',
 				'background-color': '#FAFAFA',
 				'z-index': 5000,
 				opacity: 0
 			});
 
-			$backdrop.click(function(){
-				methods.stop();
-				methods.destroy();
-				// this.parentNode.removeChild(this);
-			});
+
 			
 			var wrapperSize = {position:{}};
 			wrapperSize.width = window.innerWidth * 0.8;
-			wrapperSize.height = window.innerHeight * 0.8;
+			wrapperSize.height = window.innerHeight * 0.75;
 			wrapperSize.position.top = (window.innerHeight / 2) - (wrapperSize.height /2);
-			wrapperSize.position.right = (window.innerWidth / 2) - (wrapperSize.width /2);
+			wrapperSize.position.left = (window.innerWidth / 2) - (wrapperSize.width /2);
 			
 			var $wrapper = $("<div/>").attr({
 				id: setup.slideshowWrapperID
 			}).css({
-				position: "absolute",
+				position: "fixed",
 				width: wrapperSize.width,
 				height: wrapperSize.height,
 				top: wrapperSize.position.top,
-				left: wrapperSize.position.right,
+				left: wrapperSize.position.left,
 				
 				'background-color': "#000",
 				'box-shadow': "0 20px 50px #333",
@@ -233,38 +247,12 @@
 				overflow: "hidden",
 				'z-index': 6000
 			}).find('img').each(function(idx){
-				if(this.src) {					
-					this.onload = function() {
-						// this.setAttribute('width', this.width);
-						// this.setAttribute('height', this.height);
-						// var $cache = $("#"+setup.slideshowWrapperID);
-						// 
-						// var ratio = this.width / this.height;
-						// var h = Math.min($cache.innerHeight(), this.height);
-						// var w = h * ratio;
-						// 
-						// if( w > $cache.innerWidth() )
-						// {
-						// 	ratio = this.height / this.width;
-						// 	
-						// 	w = $cache.innerWidth();
-						// 	h = w * ratio;
-						// }
-						// 
-						// this.setAttribute(width, w);
-						// this.setAttribute(height, h);
-						this.removeAttribute("style");
-						this.setAttribute('width', 'auto');
-						this.setAttribute('height', $("#"+setup.slideshowWrapperID).innerHeight());
-						
-						this.style.display = 'block';
-						this.style.float = 'left';
-						
-						// $(this).css({
-						// 	width: 'auto',
-						// 	height: $("#"+setup.slideshowWrapperID).innerHeight()
-						// });
-					}
+				if(this.src) {
+					this.removeAttribute("style");
+					this.setAttribute('width', 'auto');
+					this.setAttribute('height', $("#"+setup.slideshowWrapperID).innerHeight());
+				
+					this.style.display = 'block';
 					
 					this.src = this.getAttribute("data-large");
 					this.removeAttribute("data-large");
@@ -276,78 +264,114 @@
 			$wrapper.append( $thumbs );
 			// $wrapper.appendTo( $backdrop );
 
+			$thumbs.children('img').click(function() {
+				imgID = this.getAttribute('data-imgid');
+				selector = '#'+setup.slideshowCaruselID+' img[data-imgid='+ imgID +']';
+					
+				$carus.trigger( 'slideTo', [ $(selector) ] );
+			}).css( 'cursor', 'pointer' );
+
+			$wrapper.hover(
+				function() {
+					$carus.trigger( 'pause' );
+					$thumbs.parent().animate({bottom: "120"});
+				}, function() {
+					$carus.trigger( 'play' );
+					$thumbs.parent().animate({bottom: "30"});
+				}
+			);
+			
+			$backdrop.click(function(){
+				methods.destroy();
+			});
+			var $closeBtn = $("<img/>").attr({
+				src: setup.images.closeImage
+			}).css({
+				position: 'fixed',
+				top: wrapperSize.position.top - 15,
+				left: wrapperSize.position.left - 15,
+				'z-index': 9000
+			}).bind('click', methods.destroy ).appendTo($wrapper);
+			
+			if ( setup.closeButtonID != false ) {
+				$(setup.closeButtonID).bind('click', function(ev) {
+					ev.preventDefault();
+					$(this).unbind('click');
+					
+					methods.destroy();
+				})
+			}
+
 			$('body').append($backdrop);
 			$('body').append($wrapper);
-						
- 
-			// console.log($('#'+setup.slideshowThumbnailID+' img[data-imgid='+ imgID +']').index());
- 
-			$carus = null;
-			$thumbs = null;
+			
+	        // methods.start(imgID, gID, options);
+			$backdrop.animate({opacity: 1}, 'fast');
+			
+			
+			$carus.waitForImages({
+			    finished: function() {
+			        methods.start(imgID, gID, options);
+			    },
+			});
+
+		},
+		
+        
+		
+		start : function( imgID, gID, options ) {
+			
+			setup = $.extend(defaults, options);
+			var gallID = setup.galleryID+gID;
+			var $carus = null;
+			var $thumbs = null;
+			
+			var wrapperSize = {position:{}};
+			wrapperSize.width = window.innerWidth * 0.8;
+			wrapperSize.height = window.innerHeight * 0.75;
+			wrapperSize.position.top = (window.innerHeight / 2) - (wrapperSize.height /2);
+			wrapperSize.position.left = (window.innerWidth / 2) - (wrapperSize.width /2);
+			
 			
 			$carus = $("#"+setup.slideshowCaruselID);
 			$thumbs = $("#"+setup.slideshowThumbnailID);
 			
-			setTimeout(function () {
-				// $("#"+setup.slideshowCaruselID).carouFredSel({items:1},{debug:true});
+			// $("#"+setup.slideshowCaruselID).carouFredSel({items:1},{debug:true});
 			
-				$carus.carouFredSel({
-					width: "100%",
-					height: "100%",
-					items: {
-						start: $('#'+setup.slideshowCaruselID+' img[data-imgid='+ imgID +']'),
-						visible: 1,
-						height: 'variable',
-						width: 'variable'
-					},
-					scroll: {
-						fx: 'crossfade',
-						onBefore: function( data ) {
-							imgID = data.items.visible.data('imgid');
-							pos = Math.floor(setup.thumbs_visible / 2) - 1;
+			$carus.carouFredSel({
+				width: "100%",
+				height: "100%",
+				items: {
+					start: $('#'+setup.slideshowCaruselID+' img[data-imgid='+ imgID +']'),
+					visible: 1,
+					height: wrapperSize.height,
+					width: 'variable'
+				},
+				scroll: {
+					fx: 'crossfade',
+					onBefore: function( data ) {
+						imgID = data.items.visible.data('imgid');
+						pos = Math.floor(setup.thumbs_visible / 2) - 1;
 							
-							$thumbs.trigger( 'slideTo', [ $('#'+setup.slideshowThumbnailID+' img[data-imgid='+ imgID +']'), - pos  ] );
-						}
-					},
-					prev: {key: 'left'},
-					next: {key: 'right'},
-					onCreate: function(data) {
-						$wrapper.css({
-							height: data.height
-						});
-						
-						$backdrop.animate({opacity: 1});
-						$wrapper.animate({opacity: 1});
+						$thumbs.trigger( 'slideTo', [ $('#'+setup.slideshowThumbnailID+' img[data-imgid='+ imgID +']'), - pos  ] );
 					}
-				});
+				},
+				prev: {key: 'left'},
+				next: {key: 'right'},
+				onCreate: function(data) {
+					$('#'+setup.slideshowWrapperID).css({
+						// height: data.height
+					}).animate({opacity: 1});
+				}
+			});
 			 
-				$thumbs.carouFredSel({
-					auto: false,
-					width: '100%'
-				});
-					 
-				$thumbs.children('img').click(function() {
-					imgID = this.getAttribute('data-imgid');
-					selector = '#'+setup.slideshowCaruselID+' img[data-imgid='+ imgID +']';
-					
-					$carus.trigger( 'slideTo', [ $(selector) ] );
-				}).css( 'cursor', 'pointer' );
-
-				$wrapper.hover(
-					function() {
-						$carus.trigger( 'pause' );
-						$thumbs.parent().animate({bottom: "120"});
-					}, function() {
-						$carus.trigger( 'play' );
-						$thumbs.parent().animate({bottom: "30"});
-					}
-				);
+			$thumbs.carouFredSel({
+				auto: false,
+				width: '100%'
+			});
 				
-				setup.thumbs_visible = $thumbs.children('img').size();
-				$carus.trigger("play", [0, true]);
-				
-			
-			}, 150);
+			setup.thumbs_visible = $thumbs.children('img').size();
+			$carus.trigger("play", [0, true]);	
         },
         
 		
@@ -369,6 +393,8 @@
 			setup = $.extend(defaults, options);
 			var wrapper = document.getElementById(setup.slideshowWrapperID);
 			var bg = document.getElementById(setup.slideshowBackdropID);
+			
+			methods.stop();
 			
 			$(wrapper).animate({opacity:0}, 200);
 			$(bg).animate({opacity:0}, 200, function() {
