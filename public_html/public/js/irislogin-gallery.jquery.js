@@ -1,38 +1,5 @@
 (function( $ ){
 	
-	var defaults = {
-		debug: false,
-		// These are the defaults.
-		irisLoginAPI: "http://api.irislogin.it/",
-		irisLogin: "http://irislogin.it/",
-		images: {
-			// closeImage: "http://api.irislogin.it/public/img/btn-del-small.png",
-			closeImage: "http://api.irislogin.it/public/img/btn-del-over-small.png",
-			loaderBackImage: "http://api.irislogin.it/public/img/ajax-loader.gif",
-		},
-		scripts: {
-			carouFredSel: "http://api.irislogin.it/public/js/jquery.carouFredSel.min.js",
-			waitForImages: "http://api.irislogin.it/public/js/jquery.waitForImages.min.js"
-		},
-		galleries: [],
-		websiteID: 0,
-		gallerySelected: 0,
-		startFrom: 0,
-		thumbs_visible: 5,
-		autoPlay: false,
-		
-		// HTML options
-		wrapperID: false,
-		galleryID: "irislogin-gallery-",
-		galleriesClass: "irislogin-galleries-wrapper",
-		closeButtonID: false,
-		
-		slideshowBackdropID: "slideshow-overall-backdrop",
-		slideshowWrapperID: "slideshow-wrapper",
-		slideshowCaruselID: "slideshow-carusel",
-		slideshowThumbnailID: "slideshow-thumb"
-	}
-	
 	var wrapperSize = {position:{}};
 	
 	// jQuery Object cache
@@ -42,7 +9,7 @@
 
     var methods = {
         init : function(options) {
-			var settings = defaults = $.extend(defaults, options );
+			var settings = $.fn.irisLoginGallery.defaults = $.extend({}, $.fn.irisLoginGallery.defaults, options );
 			
 			// If we don't have a website ID set we can't get the images and build the galleries
 			// so we cheack fort that otherwise we throw and error.
@@ -95,7 +62,7 @@
 		
 		build : function(galleries, options) {
 
-			setup = $.extend(defaults, options);
+			setup = $.extend({}, $.fn.irisLoginGallery.defaults, options);
 
 			if( ! setup.wrapperID ) {
 				alert("Wrong Setup. Check console for more informations.");
@@ -112,8 +79,7 @@
 						id: gallID,
 						'class': "well"
 					}).css({
-						width: '90%',
-						'min-width': '350px',
+						'min-width': '300px',
 						'max-width': '1200px',
 						margin: '50px auto'
 					});
@@ -155,7 +121,6 @@
 					
 					wrapper.append(gall);
 					wrapper.prependTo("#"+setup.wrapperID);
-						
 				}
 				
 				
@@ -166,25 +131,15 @@
 		
 		
 		prepare : function( imgID, gID, options ) {
-			setup = $.extend(defaults, options);
+			setup = $.extend({}, $.fn.irisLoginGallery.defaults, options);
 			var gallID = setup.galleryID+gID;
 			
 			var $backdrop = $("<div/>").attr({
 				id: setup.slideshowBackdropID
 			}).css({
-				position: 'fixed',
-				top: 0,
-				left: 0,
-				width: '100%',
-				height: '100%',
 				'min-height': $(window).height,
 				'background-image': 'url('+setup.images.loaderBackImage+')',
-				'background-repeat': 'no-repeat',
-				'background-position': 'center',
-				'background-color': '#FAFAFA',
-				'z-index': 5000,
-				opacity: 0
-			});
+			}).css( $.fn.irisLoginGallery.style.slideshowBackdrop );
 
 
 			var win_width = $(window).width();
@@ -198,31 +153,18 @@
 			$wrapper = $("<div/>").attr({
 				id: setup.slideshowWrapperID
 			}).css({
-				position: "fixed",
 				width: wrapperSize.width,
 				height: wrapperSize.height,
 				top: wrapperSize.position.top,
 				left: wrapperSize.position.left,
-				
-				'background-color': "#000",
-				'box-shadow': "0 20px 50px #333",
-				'z-index': 5500,
-				'overflow': "hidden",
-				opacity: 0
-			});
+			}).css( $.fn.irisLoginGallery.style.slideshowWrapper );
 			
 			$thumbs = $("#"+gallID +" ."+ setup.galleriesClass).clone().removeClass(setup.galleriesClass);
 			$thumbs.attr({
 				id: setup.slideshowThumbnailID,
 				style: false
-			}).css({
-				height: "120px",
-				overflow: "hidden",
-				position: "relative",
-				bottom: "50px",
-				'min-width': "250px",
-				'z-index': 6500
-			}).find('img').each(function(){
+			}).css( $.fn.irisLoginGallery.style.slideshowThumbnail )
+			 .find('img').each(function(){
 				this.removeAttribute("data-large");
 				this.removeAttribute("style");
 				
@@ -235,6 +177,9 @@
 					'box-shadow': "0 0 10px #000"
 				});
 			});
+			
+			/* We apply the style in the settings */
+			
 
 			$carus = $("#"+gallID +" ."+ setup.galleriesClass).clone().removeClass(setup.galleriesClass);
 			
@@ -242,10 +187,8 @@
 			$carus.attr({
 				id: setup.slideshowCaruselID,
 				style: false
-			}).css({
-				overflow: "hidden",
-				'z-index': 6000
-			}).find('img').each(function(idx){
+			}).css( $.fn.irisLoginGallery.style.slideshowCarusel )
+			 .find('img').each(function(idx){
 				if(this.src) {
 					this.onload =  function() {
 						var ratio = $wrapper.height() / this.height;
@@ -291,16 +234,18 @@
 			$backdrop.click(function(){
 				methods.destroy();
 			});
-			var $closeBtn = $("<img/>").attr({
-				src: setup.images.closeImage
-			}).css({
-				position: 'fixed',
-				top: wrapperSize.position.top - 15,
-				left: wrapperSize.position.left - 15,
-				'z-index': 9000
-			}).bind('click', methods.destroy ).appendTo($wrapper);
-			
 			if ( setup.closeButtonID != false ) {
+				var $closeBtn = $("<img/>").attr({
+					id: setup.closeButtonID,
+					src: setup.images.closeImage
+				}).css({
+					top: wrapperSize.position.top - 15,
+					left: wrapperSize.position.left - 15,
+				}).css( $.fn.irisLoginGallery.style.closeButton )
+				 .bind('click', methods.destroy ).appendTo($wrapper);
+			}
+			
+			if ( setup.externalCloseButtonID != false ) {
 				$(setup.closeButtonID).bind('click', function(ev) {
 					ev.preventDefault();
 					$(this).unbind('click');
@@ -330,7 +275,7 @@
 		
 		start : function( imgID, gID, options ) {
 			
-			setup = $.extend(defaults, options);
+			setup = $.extend({}, $.fn.irisLoginGallery.defaults, options);
 			var gallID = setup.galleryID+gID;
 			
 			$carus = $("#"+setup.slideshowCaruselID);
@@ -358,12 +303,12 @@
 				onCreate: function(data) {
 					$('#'+setup.slideshowWrapperID).animate({opacity: 1});
 				}
-			}, {debug: true});
+			}, {debug: setup.carouFredSel_DEBUG});
 			 
 			$thumbs.carouFredSel({
 				auto: false,
 				width: '100%'
-			});
+			}, {debug: setup.carouFredSel_DEBUG});
 				
 			setup.thumbs_visible = $thumbs.children('img').size();
 			$carus.trigger("play", [0, true]);
@@ -385,7 +330,7 @@
 		
 		
 		destroy: function(options) {
-			setup = $.extend(defaults, options);
+			setup = $.extend({}, $.fn.irisLoginGallery.defaults, options);
 			var wrapper = document.getElementById(setup.slideshowWrapperID);
 			var bg = document.getElementById(setup.slideshowBackdropID);
 			
@@ -418,6 +363,83 @@
             $.error( 'Method ' +  method + ' does not exist on jQuery.irisLoginGallery' );
         }    
     };
+	
+	$.fn.irisLoginGallery.defaults = {
+		debug: false,
+		// These are the defaults.
+		irisLoginAPI: "http://api.irislogin.it/",
+		irisLogin: "http://irislogin.it/",
+		images: {
+			// closeImage: "http://api.irislogin.it/public/img/btn-del-small.png",
+			closeImage: "http://api.irislogin.it/public/img/btn-del-over-small.png",
+			loaderBackImage: "http://api.irislogin.it/public/img/ajax-loader-big.gif"
+		},
+		scripts: {
+			carouFredSel: "http://api.irislogin.it/public/js/jquery.carouFredSel.min.js",
+			waitForImages: "http://api.irislogin.it/public/js/jquery.waitForImages.min.js"
+		},
+		
+		galleries: [],
+		websiteID: 0,
+		gallerySelected: 0,
+		startFrom: 0,
+		thumbs_visible: 5,
+		autoPlay: false,
+		
+		// HTML options
+		wrapperID: false,
+		galleryID: "irislogin-gallery-",
+		galleriesClass: "irislogin-galleries-wrapper",
+		closeButtonID: false,
+		externalCloseButtonID: false,
+		
+		slideshowBackdropID: "slideshow-overall-backdrop",
+		slideshowWrapperID: "slideshow-wrapper",
+		slideshowCaruselID: "slideshow-carusel",
+		slideshowThumbnailID: "slideshow-thumb",
+		
+		
+		carouFredSel_DEBUG: false
+	};
+	
+	$.fn.irisLoginGallery.style = {
+		closeButton: {
+			position: 'fixed',
+			'z-index': 9000
+		},
+		slideshowBackdrop: {
+			position: 'fixed',
+			top: 0,
+			left: 0,
+			width: '100%',
+			height: '100%',
+			'background-repeat': 'no-repeat',
+			'background-position': 'center',
+			'background-color': '#FAFAFA',
+			'z-index': 5000,
+			opacity: 0
+		},
+		slideshowWrapper: {
+			position: "fixed",
+			'background-color': "#000",
+			'box-shadow': "0 20px 50px #333",
+			'z-index': 5500,
+			'overflow': "hidden",
+			opacity: 0
+		},
+		slideshowCarusel: {
+			overflow: "hidden",
+			'z-index': 6000
+		},
+		slideshowThumbnail: {
+			height: "120px",
+			overflow: "hidden",
+			position: "relative",
+			bottom: "50px",
+			'min-width': "250px",
+			'z-index': 6500
+		}
+	};
 
 
 })( jQuery );
